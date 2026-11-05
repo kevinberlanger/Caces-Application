@@ -1461,8 +1461,7 @@ async function fetchReplies(){
       try{const tr=await S.mcp.callTool("Gmail","get_thread",{threadId:t.id,messageFormat:"PLAIN_TEXT"},{cache:false});
         let tp=tr.payload;if(typeof tp==="string"){try{tp=JSON.parse(tp)}catch(e){tp={}}}
         for(const m of (tp&&tp.messages)||[]){for(const o of decodeTok("AVIS",(m.plaintextBody||"")+" "+(m.snippet||""))){found++;const c=Object.values(S.cands).find(x=>x.code===o.c);if(c&&(!c.satis||(c.satis.date||"")<(o.ts||""))){applyAvis(c,o,"mail");applied++;}}
-        for(const o of decodeInscAll((m.plaintextBody||"")+" "+(m.snippet||""))){found++;
-          const c=Object.values(S.cands).find(x=>x.code===o.c);if(c&&(!c.insc||(c.insc.certifieLe||"")<(o.ts||""))){applyInsc(c,o,"mail");applied++;}}}
+        for(const o of decodeInscAll((m.plaintextBody||"")+" "+(m.snippet||""))){found++;if(importOne(o,"mail"))applied++;}}
       }catch(e){}
     }
     S.inv.fetchMsg=`${threads.length} conversation(s) lue(s) · ${found} code(s) trouvé(s) · ${applied} inscription(s) enregistrée(s).`;
@@ -3037,13 +3036,16 @@ app.addEventListener("input",e=>{const t=e.target;if(t.dataset&&t.dataset.gatt){
 app.addEventListener("change",e=>{const t=e.target;if(t.dataset&&t.dataset.gatt){render();e.stopImmediatePropagation();}},true);
 const _importInscCode0=importInscCode;
 function attApply(c){try{const a=attList().find(x=>x.mail&&x.mail===(c.email||"").toLowerCase());if(a&&a.date&&/^\d{4}-\d{2}-\d{2}$/.test(a.date)){c.arrivee=a.date;c.depart=a.date;c.dateTest=a.date;persist(c);}}catch(e){}}
+function importOne(o,src){const em=(o.e||"").toLowerCase(),all=Object.values(S.cands);
+  let c=all.find(x=>x.code===o.c&&(!x.email||x.email.toLowerCase()===em))||all.find(x=>em&&(x.email||"").toLowerCase()===em&&x.reco===(RECOS[o.r]?o.r:x.reco));
+  if(c&&c.insc&&(c.insc.certifieLe||"")>=(o.ts||""))return null;
+  if(!c){c=newCand(RECOS[o.r]?o.r:"R489");c.code=(o.c&&!all.some(x=>x.code===o.c))?o.c:rnd(6);S.cands[c.id]=c;}
+  applyInsc(c,o,src);attApply(c);return c;}
 importInscCode=function(text){const list=decodeInscAll(text);if(!list.length){toast("Code d'inscription invalide");return;}
-  const res=[];list.forEach(o=>{const em=(o.e||"").toLowerCase(),all=Object.values(S.cands);
-    let c=all.find(x=>x.code===o.c&&(!x.email||x.email.toLowerCase()===em))||all.find(x=>em&&(x.email||"").toLowerCase()===em&&x.reco===(RECOS[o.r]?o.r:x.reco));
-    if(!c){c=newCand(RECOS[o.r]?o.r:"R489");c.code=(o.c&&!all.some(x=>x.code===o.c))?o.c:rnd(6);S.cands[c.id]=c;}
-    applyInsc(c,o,"code");attApply(c);res.push({n:((c.nom||"")+" "+(c.prenom||"")).trim(),r:ficheCheck(c)});});
+  const res=[];list.forEach(o=>{const c=importOne(o,"code");if(c)res.push({n:((c.nom||"")+" "+(c.prenom||"")).trim(),r:ficheCheck(c)});});
   const ok=res.filter(x=>x.r.ok).length,ko=res.filter(x=>!x.r.ok);
   toast(res.length+" fiche(s) importée(s) · "+ok+" complète(s) ✓"+(ko.length?" · à corriger : "+ko.map(x=>x.n).join(", "):""),!!ko.length);render();};
+setInterval(()=>{try{const a=document.activeElement&&document.activeElement.tagName;if(S.mcp&&S.tab==="insc"&&!S.inv.fetching&&!S.quiz&&!S.reg&&a!=="INPUT"&&a!=="TEXTAREA"&&navigator.onLine)fetchReplies();}catch(e){}},90000);
 
 /* =========================================================================
    ÉVÉNEMENTS
