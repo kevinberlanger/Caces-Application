@@ -37,6 +37,9 @@ Voir `docs/`. Envois Gmail/Drive jamais testés en réel (seulement en simulatio
 - **APK** : l'action « APK Android » le recompile à chaque push et le dépose dans Releases → « Dernière version ». Pour que l'APK charge toujours le site en ligne, créer la variable de dépôt `SITE_URL` (Settings → Variables) avec l'adresse Pages ; sinon l'application embarquée est utilisée.
 - Les données (candidats, résultats) ne se synchronisent pas encore entre appareils : brancher l'API KODO ou un serveur DK.
 
+## Serveur DK / KODO (réception directe des fiches)
+Voir `server/README.md`. Le serveur reçoit les fiches des stagiaires (photo comprise) et les donne à l'application, qui affiche la coche ✓ et une alerte. Adresse dans `www/config.json` (`serverUrl`).
+
 ## Assistant Claude
 Bouton « ✨ Claude » (en bas à droite) : questions sur les référentiels, aide à la rédaction, relecture du dossier sélectionné (option « Joindre le dossier », sans nom ni mail).
 Il passe par un petit serveur qui garde la clé Anthropic : voir `server/README.md`. Réglages (adresse + jeton) dans le ⚙ du panneau, stockés uniquement sur l'appareil.

@@ -1596,6 +1596,7 @@ async function submitReg(){
   z.err="";z.busy=true;render();
   const o={c:z.code,r:z.reco||"R489",pf:f.pf,n:f.n.trim(),p:f.p.trim(),d:f.d,e:f.e.trim(),t:f.t.trim(),en:(f.en==="__autre"?(f.ena||""):f.en||"").trim(),emp:(()=>{const e=entFind(f.en);return f.en==="__autre"||(f.en&&!e)?{siret:(f.es||"").trim(),adr:(f.ead||"").trim(),sg:(f.esg||"").trim()}:(e||null);})(),po:f.po.trim(),ch:f.ch,ca:f.ca.trim(),nv:f.nv,xp:f.xp,cd:f.cd.trim(),am:f.am,ad:f.ad,ts:new Date().toISOString()};
   z.result=encodeInsc(o);z.sent=false;
+  if(window.__SRV&&window.__SRV.url){try{const rr=await fetch(window.__SRV.url+"/api/inscription",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(Object.assign({},o,{ph:f.ph||"",phw:f.phw}))});if(rr.ok)z.sent=true;}catch(e){}}
   if(z.cand){
     if(S.db){try{await S.db.collection("candidats").doc(z.cand.id).update({profil:o.pf||"",nom:o.n,prenom:o.p,naissance:o.d,email:o.e,tel:o.t,entreprise:o.en,statut:"inscrit",insc:{poste:o.po,champs:o.ch,champAutre:o.ca,niveau:o.nv,exp:o.xp,cacesDetenus:o.cd,attestMed:o.am,adaptation:o.ad,employeur:o.emp||null,certifieLe:o.ts,source:"formulaire"},...(f.ph?{photo:{url:f.ph,white:f.phw,at:o.ts,src:"candidat"}}:{})});z.sent=true;}catch(e){}}
     else if(S.cands[z.cand.id]){const cc=S.cands[z.cand.id];if(f.ph)cc.photo={url:f.ph,white:f.phw,at:o.ts,src:"candidat"};applyInsc(cc,o,"formulaire");z.sent=true;}
@@ -3048,6 +3049,40 @@ importInscCode=function(text){const list=decodeInscAll(text);if(!list.length){to
 setInterval(()=>{try{const a=document.activeElement&&document.activeElement.tagName;if(S.mcp&&S.tab==="insc"&&!S.inv.fetching&&!S.quiz&&!S.reg&&a!=="INPUT"&&a!=="TEXTAREA"&&navigator.onLine)fetchReplies();}catch(e){}},90000);
 
 /* =========================================================================
+   SERVEUR DK / KODO : réception directe des fiches (avec photo), notification
+   ========================================================================= */
+const SRV=window.__SRV={url:"",ok:null,last:"",err:"",n:0};
+const srvTok=()=>{try{return localStorage.getItem("caces.srvtoken")||""}catch(e){return ""}};
+const srvSince=()=>{try{return localStorage.getItem("caces.srvsince")||""}catch(e){return ""}};
+(async()=>{try{const r=await fetch("config.json",{cache:"no-store"});const j=await r.json();SRV.url=String(j.serverUrl||"").replace(/\/+$/,"");}catch(e){}})();
+async function fetchServer(manual){if(!SRV.url||!srvTok()||SRV.busy)return;SRV.busy=true;
+  try{const r=await fetch(SRV.url+"/api/inscriptions?since="+encodeURIComponent(srvSince()),{headers:{authorization:"Bearer "+srvTok()}});
+    if(r.status===401){SRV.ok=false;SRV.err="jeton refusé";}
+    else if(!r.ok){SRV.ok=false;SRV.err="erreur "+r.status;}
+    else{const j=await r.json();SRV.ok=true;SRV.err="";SRV.last=new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+      let mx=srvSince();const neu=[];
+      for(const o of j.fiches||[]){if((o.receivedAt||"")>mx)mx=o.receivedAt;const c=importOne(o,"serveur");
+        if(c){if(o.ph){c.photo={url:o.ph,white:(o.phw==null?1:o.phw),at:o.ts||o.receivedAt,src:"candidat"};persist(c);}neu.push({n:((c.nom||"")+" "+(c.prenom||"")).trim(),r:ficheCheck(c)});}}
+      try{localStorage.setItem("caces.srvsince",mx)}catch(e){}
+      if(neu.length){SRV.n+=neu.length;neu.forEach(x=>toast((x.r.ok?"✓ Fiche complète : ":"✗ Fiche à corriger : ")+x.n+(x.r.ok?"":" — "+x.r.e.join(" ; ")),!x.r.ok));}
+      if(neu.length||manual){if(!S.quiz&&!S.reg)render();}}
+  }catch(e){SRV.ok=false;SRV.err="serveur injoignable";}
+  SRV.busy=false;if(manual&&!S.quiz&&!S.reg)render();}
+setInterval(()=>{try{if(["formateur","secretariat"].includes(S.role)&&!S.quiz&&!S.reg&&navigator.onLine)fetchServer();}catch(e){}},20000);
+setTimeout(()=>{try{fetchServer()}catch(e){}},3500);
+const _viewInsc1=viewInsc;
+viewInsc=function(){let h=_viewInsc1();
+  const line=`<section class="panel pad" style="margin-bottom:14px"><div class="eyebrow">Réception directe</div><div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap">
+   <span>${!SRV.url?`<span class="pill warn">Serveur non configuré</span> <span class="note">(adresse à renseigner dans config.json)</span>`:SRV.ok===true?`<span class="pill ok">Connecté · dernier relevé ${esc(SRV.last)}</span>`:SRV.ok===false?`<span class="pill bad">${esc(SRV.err)}</span>`:`<span class="pill mut">Connexion…</span>`}</span>
+   <label class="f" style="min-width:220px">Jeton du serveur (cet appareil)<input type="password" data-gsrv="1" value="${esc(srvTok())}" placeholder="mot de passe du personnel"></label>
+   <button class="btn pri" data-act="gsrvnow">Relever maintenant</button></div>
+   <p class="note" style="margin:8px 0 0">Quand un stagiaire valide sa fiche sur son téléphone, elle arrive ici toute seule (contrôle et photo compris) et une alerte s'affiche. Relevé automatique toutes les 20 secondes.</p></section>`;
+  return line+h;};
+app.addEventListener("input",e=>{const t=e.target;if(t.dataset&&t.dataset.gsrv){try{localStorage.setItem("caces.srvtoken",t.value)}catch(x){}e.stopImmediatePropagation();}},true);
+app.addEventListener("change",e=>{const t=e.target;if(t.dataset&&t.dataset.gsrv){SRV.ok=null;fetchServer(true);e.stopImmediatePropagation();}},true);
+app.addEventListener("click",e=>{const b=e.target.closest('[data-act="gsrvnow"]');if(!b)return;e.stopImmediatePropagation();fetchServer(true);},true);
+
+/* =========================================================================
    ÉVÉNEMENTS
    ========================================================================= */
 app.addEventListener("click",e=>{
@@ -3320,7 +3355,7 @@ function ctx(){try{const c=S.cands&&S.cands[S.cur];if(!c)return"";
  try{o.pratique=c.prat}catch(e){}
  try{o.remarques=c.obs}catch(e){}
  let j=JSON.stringify(o);return j.length>15000?j.slice(0,15000)+"…":j;}catch(e){return"";}}
-async function ask(q){const cfg=ld();if(!cfg.url||!cfg.token){add("e","Réglez d'abord l'adresse du serveur et le jeton (⚙).");$("#cl-set").classList.add("on");return;}
+async function ask(q){const cfg=ld();if(!cfg.url&&window.__SRV&&window.__SRV.url){cfg.url=window.__SRV.url+"/api/claude";}if(!cfg.token){try{cfg.token=localStorage.getItem("caces.srvtoken")||""}catch(e){}}if(!cfg.url||!cfg.token){add("e","Réglez d'abord l'adresse du serveur et le jeton (⚙).");$("#cl-set").classList.add("on");return;}
  if(busy)return;busy=true;add("u",q);msgs.push({role:"user",content:q});const w=document.createElement("div");w.className="a";w.textContent="…";log.appendChild(w);
  try{const r=await fetch(cfg.url,{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+cfg.token},body:JSON.stringify({messages:msgs,context:$("#cl-ctx").checked?ctx():""})});
   const j=await r.json().catch(()=>({}));w.remove();
