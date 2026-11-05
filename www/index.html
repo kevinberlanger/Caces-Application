@@ -3224,6 +3224,58 @@ boot();
 })();
 </script>
 
+<script>/* Assistant Claude (via le serveur intermédiaire) */
+(function(){
+const K="caces.claude";
+const ld=()=>{try{return JSON.parse(localStorage.getItem(K)||"{}")}catch(e){return {}}};
+const sv=o=>{try{localStorage.setItem(K,JSON.stringify(o))}catch(e){}};
+let msgs=[],busy=false;
+const css=document.createElement("style");css.textContent=`
+#cl-btn{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9000;border:0;border-radius:999px;padding:12px 18px;background:#f0a000;color:#0d1823;font:800 15px sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.35);cursor:pointer}
+#cl-box{position:fixed;right:16px;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:9001;width:min(420px,calc(100vw - 32px));max-height:min(620px,calc(100vh - 110px));display:none;flex-direction:column;background:#fff;color:#111a22;border:1px solid #d9e0e7;border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.4);font:14px/1.45 sans-serif}
+#cl-box.on{display:flex}
+#cl-box header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0d1823;color:#fff;border-radius:16px 16px 0 0;font-weight:800}
+#cl-box header span{flex:1}#cl-box header button{background:none;border:0;color:#fff;font-size:18px;cursor:pointer}
+#cl-log{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+#cl-log div{padding:8px 11px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:92%}
+#cl-log .u{align-self:flex-end;background:#f0a000;color:#0d1823}#cl-log .a{align-self:flex-start;background:#eef1f4}#cl-log .e{align-self:flex-start;background:#fbe3e1;color:#c62828}
+#cl-box .opt{padding:6px 12px;border-top:1px solid #e3e8ee;font-size:12.5px;color:#5a6673}
+#cl-box form{display:flex;gap:6px;padding:10px;border-top:1px solid #e3e8ee}
+#cl-box textarea,#cl-box input[type=text],#cl-box input[type=password]{flex:1;border:1px solid #d9e0e7;border-radius:8px;padding:8px;font:inherit;min-width:0}
+#cl-box form button,#cl-set button{border:0;border-radius:8px;padding:8px 14px;background:#0d1823;color:#fff;font-weight:700;cursor:pointer}
+#cl-set{display:none;padding:12px;gap:8px;flex-direction:column;font-size:13px}#cl-set.on{display:flex}
+#cl-box.dk{}`;document.head.appendChild(css);
+const btn=document.createElement("button");btn.id="cl-btn";btn.textContent="✨ Claude";btn.setAttribute("aria-label","Assistant Claude");
+const box=document.createElement("div");box.id="cl-box";
+box.innerHTML=`<header><span>Assistant Claude</span><button data-a="set" title="Réglages" aria-label="Réglages">⚙</button><button data-a="clr" title="Effacer" aria-label="Effacer">↺</button><button data-a="x" aria-label="Fermer">✕</button></header>
+<div id="cl-set"><label>Adresse du serveur<input type="text" id="cl-url" placeholder="https://serveur/api/claude"></label><label>Jeton<input type="password" id="cl-tok"></label><button data-a="save" type="button">Enregistrer</button><div style="color:#5a6673">Le serveur garde la clé Anthropic. Voir server/README.md.</div></div>
+<div id="cl-log"><div class="a">Bonjour. Je peux vous aider sur les référentiels, la rédaction d'une remarque, ou relire un dossier. Cochez la case ci-dessous pour me montrer le dossier sélectionné (anonymisé).</div></div>
+<div class="opt"><label><input type="checkbox" id="cl-ctx"> Joindre le dossier sélectionné (sans nom ni mail)</label></div>
+<form><textarea id="cl-in" rows="2" placeholder="Votre question…"></textarea><button type="submit">Envoyer</button></form>`;
+document.body.append(btn,box);
+const $=s=>box.querySelector(s),log=$("#cl-log");
+const add=(c,t)=>{const d=document.createElement("div");d.className=c;d.textContent=t;log.appendChild(d);log.scrollTop=log.scrollHeight;};
+function ctx(){try{const c=S.cands&&S.cands[S.cur];if(!c)return"";
+ const o={recommandation:c.reco,categories:c.cats,type:c.type,profil:c.profil,date_test:c.dateTest,entreprise:c.entreprise||""};
+ try{const t=scoreTheo(c);if(t)o.theorie=t}catch(e){}
+ try{o.pratique=c.prat}catch(e){}
+ try{o.remarques=c.obs}catch(e){}
+ let j=JSON.stringify(o);return j.length>15000?j.slice(0,15000)+"…":j;}catch(e){return"";}}
+async function ask(q){const cfg=ld();if(!cfg.url||!cfg.token){add("e","Réglez d'abord l'adresse du serveur et le jeton (⚙).");$("#cl-set").classList.add("on");return;}
+ if(busy)return;busy=true;add("u",q);msgs.push({role:"user",content:q});const w=document.createElement("div");w.className="a";w.textContent="…";log.appendChild(w);
+ try{const r=await fetch(cfg.url,{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+cfg.token},body:JSON.stringify({messages:msgs,context:$("#cl-ctx").checked?ctx():""})});
+  const j=await r.json().catch(()=>({}));w.remove();
+  if(!r.ok){add("e",j.error||("Erreur "+r.status));msgs.pop();}else{add("a",j.text||"(réponse vide)");msgs.push({role:"assistant",content:j.text||""});}
+ }catch(e){w.remove();add("e","Serveur injoignable (réseau ou adresse).");msgs.pop();}busy=false;}
+btn.onclick=()=>{box.classList.toggle("on");const c=ld();$("#cl-url").value=c.url||"";$("#cl-tok").value=c.token||"";if(!c.url)$("#cl-set").classList.add("on");};
+box.addEventListener("click",e=>{const a=e.target.dataset&&e.target.dataset.a;if(!a)return;
+ if(a==="x")box.classList.remove("on");else if(a==="set")$("#cl-set").classList.toggle("on");
+ else if(a==="clr"){msgs=[];log.innerHTML="";add("a","Conversation effacée.");}
+ else if(a==="save"){sv({url:$("#cl-url").value.trim(),token:$("#cl-tok").value});$("#cl-set").classList.remove("on");add("a","Réglages enregistrés sur cet appareil.");}});
+box.querySelector("form").addEventListener("submit",e=>{e.preventDefault();const t=$("#cl-in");const q=t.value.trim();if(!q)return;t.value="";ask(q);});
+setInterval(()=>{try{const h=!!(S.quiz||S.reg||S.sat);btn.style.display=h?"none":"";if(h)box.classList.remove("on");}catch(e){}},1000);
+})();
+</script>
 <script>/* PWA : mise à jour automatique */
 if("serviceWorker"in navigator&&/^https?:$/.test(location.protocol)){addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").then(r=>{r.update();r.addEventListener("updatefound",()=>{const w=r.installing;w&&w.addEventListener("statechange",()=>{if(w.state==="installed"&&navigator.serviceWorker.controller){try{const t=document.createElement("div");t.textContent="Nouvelle version disponible : touchez pour recharger";t.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:#0d1823;color:#fff;padding:12px 18px;border-radius:10px;z-index:99999;font:600 14px sans-serif;cursor:pointer";t.onclick=()=>location.reload();document.body.appendChild(t);}catch(e){}}});});}).catch(()=>{});});}
 </script></body></html>
