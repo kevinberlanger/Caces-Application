@@ -3075,7 +3075,7 @@ viewInsc=function(){let h=_viewInsc1();
   const line=`<section class="panel pad" style="margin-bottom:14px"><div class="eyebrow">Réception directe</div><div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap">
    <span>${!SRV.url?`<span class="pill warn">Serveur non configuré</span> <span class="note">(adresse à renseigner dans config.json)</span>`:SRV.ok===true?`<span class="pill ok">Connecté · dernier relevé ${esc(SRV.last)}</span>`:SRV.ok===false?`<span class="pill bad">${esc(SRV.err)}</span>`:`<span class="pill mut">Connexion…</span>`}</span>
    <label class="f" style="min-width:220px">Jeton du serveur (cet appareil)<input type="password" data-gsrv="1" value="${esc(srvTok())}" placeholder="mot de passe du personnel"></label>
-   <button class="btn pri" data-act="gsrvnow">Relever maintenant</button></div>
+   <button class="btn pri" data-act="gsrvnow">Relever maintenant</button><button class="btn" data-act="g_zip">Télécharger le package (ZIP : fiches, photos, documents, PDF)</button></div>
    <p class="note" style="margin:8px 0 0">Quand un stagiaire valide sa fiche sur son téléphone, elle arrive ici toute seule (contrôle et photo compris) et une alerte s'affiche. Relevé automatique toutes les 20 secondes.</p></section>`;
   return line+h;};
 app.addEventListener("input",e=>{const t=e.target;if(t.dataset&&t.dataset.gsrv){try{localStorage.setItem("caces.srvtoken",t.value)}catch(x){}e.stopImmediatePropagation();}},true);
