@@ -595,7 +595,8 @@ button.netb:hover{background:color-mix(in srgb,var(--night-ink) 10%,transparent)
 /* =========================================================================
    CONFIG
    ========================================================================= */
-const ARTIFACT_URL = "https://claude.ai/artifact/U1doACbJd5UttTXRxbUGaF";
+const ARTIFACT_URL = "https://kevinberlanger.github.io/Caces-Application/";
+const REG_MAIL = "kevin.berlanger@dkgroup.fr";
 const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const B32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -1539,7 +1540,7 @@ function renderReg(){
   if(z.stage==="done"){
     body=`<div class="qcard endc"><div class="trophy">✓</div><h2 style="font-size:34px;font-weight:800;text-transform:uppercase">${z.sent?"Inscription enregistrée":"Presque fini !"}</h2>
       ${z.sent?`<p>Merci ${esc(f.p)}. Votre fiche est transmise ${strTo()} : vous êtes validé(e) sur la session${c?" "+esc(periodTxt(c)):""}.${f.ph?"":" <b>Pensez à ajouter votre photo</b> en rouvrant le lien reçu par mail."}</p>`
-      :`<p>Répondez au mail d'invitation en collant ce code de confirmation, <b>et joignez votre photo d'identité sur fond blanc</b>. Votre inscription sera enregistrée à sa réception.</p>
+      :`<p>Dernière étape : envoyez ce code par mail, <b>et joignez votre photo d'identité sur fond blanc</b>. Votre inscription sera enregistrée à sa réception.</p><a class="qbtn go" style="display:block;text-decoration:none;text-align:center;margin-bottom:10px" href="mailto:${encodeURIComponent((S.centre&&S.centre.secEmail)||REG_MAIL).replace(/%40/g,"@")}?subject=${encodeURIComponent("Inscription formation "+((r&&r.label)||"")+" — "+f.p+" "+f.n)}&body=${encodeURIComponent("Bonjour,\n\nVoici mon code de confirmation d'inscription (ma photo d'identité sur fond blanc est jointe) :\n\n"+z.result+"\n\n"+f.p+" "+f.n)}">Envoyer par mail</a>
         <div class="rescode" style="font-size:14px;letter-spacing:0;text-align:left">${esc(z.result)}</div>
         <button class="qbtn go" data-act="regcopy">Copier le code</button>`}</div>`;
   } else {
