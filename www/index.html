@@ -572,6 +572,8 @@ button.netb:hover{background:color-mix(in srgb,var(--night-ink) 10%,transparent)
 .netb.net-off i{background:var(--bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 30%,transparent)}
 .netb.net-sync i,.netb.net-err i{background:var(--warn);box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 30%,transparent)}
 .netb.net-off{color:#ffb4ac;font-weight:700}
+.netb.net-ok i{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 30%,transparent)}
+.netb.net-err{color:#ffd9a0}
 .offst{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:12px;border:1px solid var(--line)}.offst.on{background:var(--ok-soft);border-color:var(--ok)}.offst.off{background:var(--bad-soft);border-color:var(--bad)}
 .offq{margin:0 0 10px;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}.offtips{padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
 
@@ -2397,7 +2399,7 @@ function netState(){const n=OFF.q.length,on=navigator.onLine;
   if(n)return ["sync",OFF.busy?`Envoi de ${n} élément${n>1?"s":""}…`:`${n} en attente`];
   if(OFF.err.length)return ["err",`${OFF.err.length} échec${OFF.err.length>1?"s":""} d'envoi`];
   return ["ok",S.mode==="db"?"Synchronisé":"Stockage local"];}
-function netBadge(){const [k,t]=netState();return `<button class="sync netb net-${k}" id="netb" data-act="xoff" title="Mode hors connexion : préparer, voir ce qui est en attente"><i></i><span id="syncT">${esc(t)}</span></button>`;}
+function netBadge(){const [k,t]=netState();return `<button class="sync netb net-${k}" id="netb" data-act="xoff" title="Connexion : réseau et serveur. Cliquer pour voir ce qui est en attente (mode hors connexion)"><i></i><span id="syncT">${esc(t)}</span></button>`;}
 function netUpd(){const el=document.getElementById("netb");if(!el)return;const [k,t]=netState();el.className="sync netb net-"+k;const s=el.querySelector("#syncT");if(s)s.textContent=t;}
 function offModal(){const on=navigator.onLine,q=OFF.q,mails=q.filter(x=>x.k==="mail"),ops=q.filter(x=>x.k!=="mail"),cs=Object.values(S.cands).filter(c=>c.id!=="exemple"),ph=cs.filter(c=>photoOf(c)).length;
   const lbl=o=>o.k==="mail"?`Mail à ${esc((o.args.to||[]).join(", "))} — ${esc(o.args.subject||"")}`:`${o.col==="candidats"?"Dossier "+esc(((S.cands[o.id]||{}).prenom||"")+" "+(((S.cands[o.id]||{}).nom||"").toUpperCase())):o.col==="demandes"?"Demande client":o.col==="sessions"?"Session / émargement":esc(o.col||o.path)}${o.m==="delete"?" (suppression)":""}`;
@@ -3081,6 +3083,14 @@ async function fetchServer(manual){if(!SRV.url||!srvTok()||SRV.busy)return;SRV.b
   SRV.busy=false;if(manual&&!S.quiz&&!S.reg)render();}
 setInterval(()=>{try{if(["formateur","secretariat"].includes(S.role)&&!S.quiz&&!S.reg&&navigator.onLine)fetchServer();}catch(e){}},20000);
 setTimeout(()=>{try{fetchServer()}catch(e){}},3500);
+/* Indicateur connexion : réseau + serveur DK/KODO */
+const _netState0=netState;
+netState=function(){const [k,t]=_netState0();if(k==="off")return [k,"Hors connexion"+(OFF.q.length?" · "+OFF.q.length+" en attente":"")];
+  if(k==="sync"||k==="err")return [k,t];
+  if(SRV.url&&SRV.ok===false)return ["err",(SRV.err&&SRV.err!=="serveur injoignable"?"En ligne · serveur : "+SRV.err:"En ligne · serveur injoignable")];
+  if(SRV.url&&SRV.ok===true)return ["ok","En ligne · serveur connecté"];
+  return ["ok","En ligne · "+(S.mode==="db"?"synchronisé":"stockage local")];};
+setInterval(()=>{try{netUpd();}catch(e){}},3000);
 const _viewInsc1=viewInsc;
 viewInsc=function(){let h=_viewInsc1();
   const line=`<section class="panel pad" style="margin-bottom:14px"><div class="eyebrow">Réception directe</div><div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap">
