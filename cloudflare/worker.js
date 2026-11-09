@@ -6,6 +6,10 @@ const SYSTEM = `Tu es l'assistant du Banc d'évaluation CACES / ACES de DK Group
 Réponds en français, de façon directe et précise, sans flatterie. Si tu ne sais pas, dis-le.
 Règles métier : réussite CACES® = au moins 70/100 en théorie et au moins la moyenne dans chaque thème, aucun point pratique à 0 ; CACES® = test par un organisme certifié, ACES = autorisation de conduite de l'employeur ; le formateur ne peut pas être le testeur pour un CACES®.
 Tu proposes, tu ne décides pas. N'invente aucune donnée absente du contexte fourni.`;
+// Si les variables Cloudflare sont introuvables, on utilise ces valeurs.
+// JETON : remplacez le texte entre guillemets par votre mot de passe, DIRECTEMENT dans l'éditeur Cloudflare (jamais dans GitHub).
+const JETON = "REMPLACER_PAR_VOTRE_JETON";
+const ORIGINE = "https://kevinberlanger.github.io";
 const hits = new Map();
 const limited = (ip, max) => { const now = Date.now(), h = (hits.get(ip) || []).filter(t => now - t < 60000); if (h.length >= max) return true; h.push(now); hits.set(ip, h); return false; };
 const mail = x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x || "");
@@ -14,7 +18,7 @@ const safeEq = (a, b) => { if (a.length !== b.length) return false; let r = 0; f
 
 export default {
   async fetch(req, env) {
-    const origins = (env.ALLOWED_ORIGIN || "").split(",").map(s => s.trim()).filter(Boolean);
+    const origins = (env.ALLOWED_ORIGIN || ORIGINE).split(",").map(s => s.trim()).filter(Boolean);
     const origin = req.headers.get("origin");
     const originOk = !origin || origins.includes("*") || origins.includes(origin);
     const h = { "content-type": "application/json", "access-control-allow-headers": "authorization,content-type", "access-control-allow-methods": "GET,POST,OPTIONS" };
@@ -23,7 +27,8 @@ export default {
     if (req.method === "OPTIONS") return send(204);
     if (!originOk) return send(403, { error: "origine non autorisée" });
     const url = new URL(req.url), ip = req.headers.get("cf-connecting-ip") || "x";
-    const staff = !!env.APP_TOKEN && safeEq(req.headers.get("authorization") || "", "Bearer " + env.APP_TOKEN);
+    const tok = env.APP_TOKEN || JETON;
+    const staff = tok !== "REMPLACER_PAR_VOTRE_JETON" && tok.length >= 12 && safeEq(req.headers.get("authorization") || "", "Bearer " + tok);
     try {
       if (req.method === "GET" && url.pathname === "/health") return send(200, { ok: true });
       if (req.method === "POST" && url.pathname === "/api/inscription") {
