@@ -3081,7 +3081,7 @@ async function fetchServer(manual){if(!SRV.url||!srvTok()||SRV.busy)return;SRV.b
     else if(!r.ok){SRV.ok=false;SRV.err="erreur "+r.status;}
     else{const j=await r.json();SRV.ok=true;SRV.err="";SRV.last=new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
       let mx=srvSince();const neu=[];
-      for(const o of j.fiches||[]){if((o.receivedAt||"")>mx)mx=o.receivedAt;const c=importOne(o,"serveur");
+      for(const o of j.fiches||[]){if((o.receivedAt||"")>mx)mx=o.receivedAt;let c=null;try{c=importOne(o,"serveur");}catch(e){SRV.bad=(SRV.bad||0)+1;try{logErr("fiche",(e&&e.message)||e,e&&e.stack)}catch(x){}}
         if(c){if(o.ph){c.photo={url:o.ph,white:(o.phw==null?1:o.phw),at:o.ts||o.receivedAt,src:"candidat"};persist(c);}neu.push({n:((c.nom||"")+" "+(c.prenom||"")).trim(),r:ficheCheck(c)});}}
       try{localStorage.setItem("caces.srvsince",mx)}catch(e){}
       if(neu.length){SRV.n+=neu.length;neu.forEach(x=>toast((x.r.ok?"✓ Fiche complète : ":"✗ Fiche à corriger : ")+x.n+(x.r.ok?"":" — "+x.r.e.join(" ; ")),!x.r.ok));}

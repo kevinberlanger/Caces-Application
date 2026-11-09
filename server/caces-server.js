@@ -12,6 +12,20 @@ const SYSTEM = `Tu es l'assistant du Banc d'évaluation CACES / ACES de DK Group
 Réponds en français, de façon directe et précise, sans flatterie. Si tu ne sais pas, dis-le.
 Règles métier : réussite CACES® = au moins 70/100 en théorie et au moins la moyenne dans chaque thème, aucun point pratique à 0 ; CACES® = test par un organisme certifié, ACES = autorisation de conduite de l'employeur ; le formateur ne peut pas être le testeur pour un CACES®.
 Tu proposes, tu ne décides pas. N'invente aucune donnée absente du contexte fourni.`;
+const RECOS = ["R485", "R486", "R489", "TP"], LEN = { c: 12, r: 4, n: 80, p: 80, d: 10, e: 120, t: 30, en: 120, po: 80, ca: 120, nv: 12, xp: 40, cd: 200, am: 8, ad: 8, pf: 20, ts: 40 };
+// Ne garde que les champs attendus, avec leur type et une taille maximale (la fiche vient d'un formulaire public).
+const clean = o => {
+  if (!o || typeof o !== "object" || Array.isArray(o)) return null;
+  const c = {};
+  for (const k of Object.keys(LEN)) if (typeof o[k] === "string") c[k] = o[k].slice(0, LEN[k]);
+  if (Array.isArray(o.ch)) c.ch = o.ch.filter(x => typeof x === "string").slice(0, 10).map(x => x.slice(0, 60));
+  if (o.emp && typeof o.emp === "object" && !Array.isArray(o.emp)) { c.emp = {}; for (const k of Object.keys(o.emp).slice(0, 12)) if (typeof o.emp[k] === "string") c.emp[k] = o.emp[k].slice(0, 200); }
+  if (typeof o.phw === "number" && isFinite(o.phw)) c.phw = o.phw;
+  if (typeof o.ph === "string" && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+\/=]+$/.test(o.ph) && o.ph.length <= 500000) c.ph = o.ph;
+  if (c.r && !RECOS.includes(c.r)) delete c.r;
+  if (c.d && !/^\d{4}-\d{2}-\d{2}$/.test(c.d)) delete c.d;
+  return c;
+};
 const hits = new Map();
 const limited = (ip, max) => { const now = Date.now(), h = (hits.get(ip) || []).filter(t => now - t < 60000); if (h.length >= max) return true; h.push(now); hits.set(ip, h); return false; };
 const cors = (req, res) => { const o = req.headers.origin; if (o && (ORIGINS.includes("*") || ORIGINS.includes(o))) { res.setHeader("Access-Control-Allow-Origin", o); res.setHeader("Vary", "Origin"); }
@@ -29,8 +43,8 @@ http.createServer(async (req, res) => {
     if (req.method === "POST" && url.pathname === "/api/inscription") {
       if (limited(ip, 30)) return send(429, { error: "trop de demandes" });
       let o; try { o = JSON.parse(await readBody(req, 700000)); } catch (e) { return send(400, { error: "fiche illisible" }); }
+      o = clean(o);
       if (!o || !o.n || !o.p || !mail(o.e) || !o.d) return send(400, { error: "fiche incomplète" });
-      if (o.ph && (typeof o.ph !== "string" || !/^data:image\/(jpeg|png);base64,/.test(o.ph) || o.ph.length > 500000)) delete o.ph;
       const id = crypto.createHash("sha1").update((o.e || "").toLowerCase() + "|" + (o.r || "")).digest("hex").slice(0, 16);
       o.receivedAt = new Date().toISOString();
       fs.writeFileSync(path.join(FICHES, id + ".json"), JSON.stringify(o));

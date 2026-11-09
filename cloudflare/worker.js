@@ -10,6 +10,20 @@ Tu proposes, tu ne décides pas. N'invente aucune donnée absente du contexte fo
 // JETON : remplacez le texte entre guillemets par votre mot de passe, DIRECTEMENT dans l'éditeur Cloudflare (jamais dans GitHub).
 const JETON = "REMPLACER_PAR_VOTRE_JETON";
 const ORIGINE = "https://kevinberlanger.github.io";
+const RECOS = ["R485", "R486", "R489", "TP"], LEN = { c: 12, r: 4, n: 80, p: 80, d: 10, e: 120, t: 30, en: 120, po: 80, ca: 120, nv: 12, xp: 40, cd: 200, am: 8, ad: 8, pf: 20, ts: 40 };
+// Ne garde que les champs attendus, avec leur type et une taille maximale (la fiche vient d'un formulaire public).
+const clean = o => {
+  if (!o || typeof o !== "object" || Array.isArray(o)) return null;
+  const c = {};
+  for (const k of Object.keys(LEN)) if (typeof o[k] === "string") c[k] = o[k].slice(0, LEN[k]);
+  if (Array.isArray(o.ch)) c.ch = o.ch.filter(x => typeof x === "string").slice(0, 10).map(x => x.slice(0, 60));
+  if (o.emp && typeof o.emp === "object" && !Array.isArray(o.emp)) { c.emp = {}; for (const k of Object.keys(o.emp).slice(0, 12)) if (typeof o.emp[k] === "string") c.emp[k] = o.emp[k].slice(0, 200); }
+  if (typeof o.phw === "number" && isFinite(o.phw)) c.phw = o.phw;
+  if (typeof o.ph === "string" && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+\/=]+$/.test(o.ph) && o.ph.length <= 500000) c.ph = o.ph;
+  if (c.r && !RECOS.includes(c.r)) delete c.r;
+  if (c.d && !/^\d{4}-\d{2}-\d{2}$/.test(c.d)) delete c.d;
+  return c;
+};
 const hits = new Map();
 const limited = (ip, max) => { const now = Date.now(), h = (hits.get(ip) || []).filter(t => now - t < 60000); if (h.length >= max) return true; h.push(now); hits.set(ip, h); return false; };
 const mail = x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x || "");
@@ -36,8 +50,8 @@ export default {
         const raw = await req.text();
         if (raw.length > 700000) return send(413, { error: "fiche trop lourde" });
         let o; try { o = JSON.parse(raw); } catch (e) { return send(400, { error: "fiche illisible" }); }
+        o = clean(o);
         if (!o || !o.n || !o.p || !mail(o.e) || !o.d) return send(400, { error: "fiche incomplète" });
-        if (o.ph && (typeof o.ph !== "string" || !/^data:image\/(jpeg|png);base64,/.test(o.ph) || o.ph.length > 500000)) delete o.ph;
         const id = await sha1((o.e || "").toLowerCase() + "|" + (o.r || ""));
         o.receivedAt = new Date().toISOString();
         await env.FICHES.put("f:" + id, JSON.stringify(o));
