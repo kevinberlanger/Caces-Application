@@ -2434,7 +2434,7 @@ async function softReboot(full){
   try{await saveMirror(true);}catch(e){}
   try{OFF.save();}catch(e){}
   Object.keys(S).forEach(k=>{if(!BOOT_KEEP.has(k))delete S[k];});
-  Object.entries(JSON.parse(JSON.stringify(S0))).forEach(([k,v])=>{if(!BOOT_KEEP.has(k))S[k]=v;});
+  Object.entries(JSON.parse(JSON.stringify(S0))).forEach(([k,v])=>{if(!BOOT_KEEP.has(k))S[k]=v;});try{SXrestore();}catch(e){}
   exInit();S.hday=isoD(new Date());S.inv.date=S.hday;S.pedSend={t:true,s:true,c:false};S.parcF="tous";
   Object.values(S.cands).forEach(c=>{try{normCand(c);ped(c);}catch(e){}});
   S.cur=Object.keys(S.cands)[0]||null;S.tab="home";
@@ -3660,7 +3660,7 @@ document.addEventListener("keydown",e=>{if(S.tab!=="insc"||S.quiz||S.reg||S.sat)
 
 /* ---------- Diagnostic : toute erreur est affichée et copiable ---------- */
 S.errLog=[];
-function logErr(kind,msg,stack){const e={at:new Date().toLocaleTimeString("fr-FR"),kind,msg:String(msg||"").slice(0,300),where:`espace ${S.role}, onglet ${S.tab}`,stack:String(stack||"").split("\n").slice(0,4).join(" | ").slice(0,500)};S.errLog.push(e);if(S.errLog.length>20)S.errLog.shift();
+function logErr(kind,msg,stack){const e={at:new Date().toLocaleTimeString("fr-FR"),kind,msg:String(msg||"").slice(0,300),where:`espace ${S.role}, onglet ${S.tab}`,stack:String(stack||"").split("\n").slice(0,4).join(" | ").slice(0,500)};if(!Array.isArray(S.errLog))S.errLog=[];S.errLog.push(e);if(S.errLog.length>20)S.errLog.shift();
   let bar=document.getElementById("errbar");if(!bar){bar=document.createElement("div");bar.id="errbar";bar.style.cssText="position:fixed;left:12px;right:12px;bottom:70px;z-index:90;background:#7f1d1d;color:#fff;padding:10px 14px;border-radius:12px;font:600 13px system-ui;box-shadow:0 10px 30px rgba(0,0,0,.4);display:flex;gap:10px;align-items:center;flex-wrap:wrap";document.body.appendChild(bar);}
   bar.innerHTML="";const t=document.createElement("span");t.style.flex="1";t.textContent=`Erreur (${e.where}) : ${e.msg}`;bar.appendChild(t);
   const cp=document.createElement("button");cp.textContent="Copier le diagnostic";cp.style.cssText="background:#fff;color:#7f1d1d;border:0;border-radius:8px;padding:6px 10px;font-weight:700";cp.onclick=()=>{const txt=S.errLog.map(x=>`${x.at} [${x.kind}] ${x.where} : ${x.msg}\n  ${x.stack}`).join("\n");(navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>{cp.textContent="Copié ✓";},()=>{t.textContent=txt;});};bar.appendChild(cp);
@@ -3794,6 +3794,11 @@ boot();
     if(S.sat&&!S.sat.cand)lookupSat();else if(S.reg)lookupReg();else if(S.quiz&&S.quiz.code&&S.quiz.code.length===6)lookupCand(S.quiz.code);else if(!S.quiz)render();
   }catch(e){}
 })();
+
+/* Clés d'état ajoutées par les modules après la création de S : conservées au redémarrage */
+const SX_KEYS=Object.keys(S).filter(k=>!(k in S0));
+const SX0=(()=>{const o={};SX_KEYS.forEach(k=>{const v=S[k];o[k]=v instanceof Set?{__set:[...v]}:(v===undefined?undefined:JSON.parse(JSON.stringify(v)))});return o;})();
+function SXrestore(){SX_KEYS.forEach(k=>{if(S[k]!==undefined)return;const v=SX0[k];S[k]=v&&v.__set?new Set(v.__set):(v===undefined?undefined:JSON.parse(JSON.stringify(v)));});}
 </script>
 
 <script>/* Assistant Claude (via le serveur intermédiaire) */
