@@ -3603,7 +3603,7 @@ const _renderRq=render;
 render=function(){_renderRq();try{rqDecorate();}catch(e){console.error(e);}};
 function rqRemoveAtt(mail,nom){const t=(S.centre&&S.centre.attendus!==undefined)?S.centre.attendus:ATT_DEF;let done=false;
   S.centre.attendus=String(t).split("\n").filter(l=>{if(done)return true;const p=l.split("|").map(x=>x.trim());const hit=mail?(p[1]||"").toLowerCase()===mail:(p[0]||"")===nom;if(hit){done=true;return false;}return true;}).join("\n");saveCentre();}
-app.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||!/^qb_rq/.test(b.dataset.act))return;e.stopImmediatePropagation();
+app.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||!/^qb_rq(?!all|b)/.test(b.dataset.act))return;e.stopImmediatePropagation();
   const a=b.dataset.act,d=S.rqDel;
   if(a==="qb_rqx"){S.rqDel={cid:b.dataset.cid||"",amail:b.dataset.amail||"",anom:b.dataset.anom||""};render();return;}
   if(a==="qb_rqno"){S.rqDel=null;render();return;}
@@ -3623,7 +3623,7 @@ rqDecorate=function(){if(S.tab!=="insc"||S.quiz||S.reg||S.sat||S.em)return;
     const cb=`<input type="checkbox" data-rqsel="${esc(k)}" ${S.rqSel.has(k)?"checked":""} aria-label="Sélectionner" style="width:20px;height:20px;accent-color:var(--bad);vertical-align:middle">`;
     if(el.tagName==="TR")el.insertAdjacentHTML("afterbegin",`<td style="width:1%">${cb}</td>`);else el.insertAdjacentHTML("afterbegin",cb+" ");});
   app.querySelectorAll("table[data-rqd]").forEach(t=>{const hr=t.querySelector("thead tr");if(hr&&!hr.dataset.rqh){hr.dataset.rqh=1;hr.insertAdjacentHTML("afterbegin","<th></th>");}});
-  app.querySelectorAll("[data-rqcount]").forEach(sp=>{if(sp.previousElementSibling&&sp.parentElement.querySelector("[data-act='qb_rqall']"))return;sp.insertAdjacentHTML("beforebegin",`<button class="btn" data-act="qb_rqall" style="padding:6px 10px;font-size:13px">Tout sélectionner</button>`);});
+  app.querySelectorAll("[data-rqcount]").forEach(sp=>{if(sp.previousElementSibling&&sp.parentElement.querySelector("[data-act='qb_rqall']"))return;sp.insertAdjacentHTML("beforebegin",`<button class="btn" data-act="qb_rqall" style="padding:6px 10px;font-size:13px">${(()=>{const ks=[...app.querySelectorAll("[data-rqrow]")].map(rqKey);return ks.length&&ks.every(k=>S.rqSel.has(k))?"Tout désélectionner":"Tout sélectionner";})()}</button>`);});
   const n=S.rqSel.size,first=app.querySelector("[data-rqrow]"),host=first&&(first.closest("section,.panel")||first.parentElement);
   if(host&&n){const hint=`<span class="note">Entrée = valider · Échap = annuler</span>`;
     host.insertAdjacentHTML("afterbegin",S.rqBulk?`<div class="confirm noprint" style="margin-bottom:10px"><b>${S.rqBulk==="cand"?`Supprimer ${n} fiche(s) et leurs retours ?`:`Retirer ${n} personne(s) de la liste des attendus ?`}</b><button class="btn danger" data-act="qb_rqbok">Oui, ${S.rqBulk==="cand"?"supprimer":"retirer"}</button><button class="btn" data-act="qb_rqbno">Annuler</button>${hint}</div>`
@@ -3636,7 +3636,7 @@ function rqDeleteKeys(keys,mode){let nc=0,nl=0;for(const k of keys){if(k.startsW
 function rqDoSingle(){const d=S.rqDel;if(!d)return;if(d.cid&&S.cands[d.cid]){if(d.amail)rqRemoveAtt(d.amail,d.anom);removeCand(d.cid);if(S.cur===d.cid)S.cur=Object.keys(S.cands)[0]||null;toast("Fiche supprimée");}else{rqRemoveAtt(d.amail,d.anom);toast("Retiré de la liste des attendus");}S.rqSel.delete(d.cid?"c:"+d.cid:"m:"+d.amail+"|"+d.anom);S.rqDel=null;render();}
 app.addEventListener("change",e=>{const t=e.target;if(!(t.dataset&&t.dataset.rqsel!==undefined))return;e.stopImmediatePropagation();t.checked?S.rqSel.add(t.dataset.rqsel):S.rqSel.delete(t.dataset.rqsel);S.rqBulk=null;render();},true);
 app.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;if(!/^qb_rq(all|b)/.test(a))return;e.stopImmediatePropagation();
-  if(a==="qb_rqall"){app.querySelectorAll("[data-rqrow]").forEach(el=>{if(el.style.display!=="none")S.rqSel.add(rqKey(el));});}
+  if(a==="qb_rqall"){const els=[...app.querySelectorAll("[data-rqrow]")].filter(el=>el.style.display!=="none"),all=els.length&&els.every(el=>S.rqSel.has(rqKey(el)));els.forEach(el=>{all?S.rqSel.delete(rqKey(el)):S.rqSel.add(rqKey(el));});S.rqBulk=null;}
   if(a==="qb_rqbclr"){S.rqSel.clear();S.rqBulk=null;}
   if(a==="qb_rqbcand")S.rqBulk="cand";
   if(a==="qb_rqblist")S.rqBulk="list";
