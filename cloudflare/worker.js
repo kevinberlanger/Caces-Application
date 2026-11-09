@@ -55,11 +55,15 @@ export default {
         const id = await sha1((o.e || "").toLowerCase() + "|" + (o.r || ""));
         o.receivedAt = new Date().toISOString();
         await env.FICHES.put("f:" + id, JSON.stringify(o));
+        await env.FICHES.put("m:last", o.receivedAt);
         return send(200, { ok: true, id });
       }
       if (req.method === "GET" && url.pathname === "/api/inscriptions") {
         if (!staff) return send(401, { error: "jeton invalide" });
         const since = url.searchParams.get("since") || "";
+        // Relevé peu coûteux : une seule lecture tant qu'aucune nouvelle fiche n'est arrivée (quota gratuit KV).
+        const last = await env.FICHES.get("m:last");
+        if (last && last <= since) return send(200, { fiches: [] });
         const out = []; let cursor;
         do {
           const l = await env.FICHES.list({ prefix: "f:", cursor });
@@ -68,6 +72,7 @@ export default {
           cursor = l.list_complete ? null : l.cursor;
         } while (cursor);
         out.sort((a, b) => (a.receivedAt || "").localeCompare(b.receivedAt || ""));
+        if (!last && out.length) await env.FICHES.put("m:last", out[out.length - 1].receivedAt);
         return send(200, { fiches: out });
       }
       if (req.method === "POST" && url.pathname === "/api/claude") {

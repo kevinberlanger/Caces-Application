@@ -3088,7 +3088,7 @@ async function fetchServer(manual){if(!SRV.url||!srvTok()||SRV.busy)return;SRV.b
       if(neu.length||manual){if(!S.quiz&&!S.reg)render();}}
   }catch(e){SRV.ok=false;SRV.err="serveur injoignable";}
   SRV.busy=false;if(manual&&!S.quiz&&!S.reg)render();}
-setInterval(()=>{try{if(["formateur","secretariat"].includes(S.role)&&!S.quiz&&!S.reg&&navigator.onLine)fetchServer();}catch(e){}},20000);
+setInterval(()=>{try{if(["formateur","secretariat"].includes(S.role)&&!S.quiz&&!S.reg&&navigator.onLine&&document.visibilityState==="visible")fetchServer();}catch(e){}},20000);
 setTimeout(()=>{try{fetchServer()}catch(e){}},3500);
 /* Indicateur connexion : réseau + serveur DK/KODO */
 const _netState0=netState;
