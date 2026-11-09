@@ -567,6 +567,13 @@ table.xsheet{width:100%;border-collapse:collapse}.xsheet td{border-top:1px solid
 .xattp h3{font-family:var(--f-display);font-size:24px;text-transform:uppercase;margin:0 0 10px}.xattn{font-size:19px;font-weight:700;margin:6px 0}.xattp .note{color:#555}
 .xattsig{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:22px;align-items:flex-end}.xattsig img{display:block;height:70px}
 
+.netb{display:inline-flex;align-items:center;gap:4px}
+.netb .nseg{padding:4px 11px;border-radius:999px;font-size:12px;font-weight:800;opacity:.4;border:1px solid color-mix(in srgb,var(--night-ink) 25%,transparent)}
+.netb.net-off .nseg.h{background:var(--bad);border-color:var(--bad);color:#fff;opacity:1}
+.netb.net-ok .nseg.c,.netb.net-sync .nseg.c{background:var(--ok);border-color:var(--ok);color:#fff;opacity:1}
+.netb.net-err .nseg.c{background:var(--warn);border-color:var(--warn);color:#fff;opacity:1}
+.netb .ndet{font-size:11px;margin-left:4px;max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:640px){.netb .ndet{display:none}}
 button.netb{border:0;background:none;cursor:pointer;padding:6px 8px;border-radius:8px;font:inherit;font-size:12px;color:var(--night-muted)}
 button.netb:hover{background:color-mix(in srgb,var(--night-ink) 10%,transparent)}
 .netb.net-off i{background:var(--bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 30%,transparent)}
@@ -2399,7 +2406,7 @@ function netState(){const n=OFF.q.length,on=navigator.onLine;
   if(n)return ["sync",OFF.busy?`Envoi de ${n} élément${n>1?"s":""}…`:`${n} en attente`];
   if(OFF.err.length)return ["err",`${OFF.err.length} échec${OFF.err.length>1?"s":""} d'envoi`];
   return ["ok",S.mode==="db"?"Synchronisé":"Stockage local"];}
-function netBadge(){const [k,t]=netState();return `<button class="sync netb net-${k}" id="netb" data-act="xoff" title="Connexion : réseau et serveur. Cliquer pour voir ce qui est en attente (mode hors connexion)"><i></i><span id="syncT">${esc(t)}</span></button>`;}
+function netBadge(){const [k,t]=netState();return `<button class="sync netb net-${k}" id="netb" data-act="xoff" title="Connexion : réseau et serveur. Cliquer pour voir ce qui est en attente (mode hors connexion)"><span class="nseg c">Connexion</span><span class="nseg h">Hors connexion</span><span id="syncT" class="ndet">${esc(t)}</span></button>`;}
 function netUpd(){const el=document.getElementById("netb");if(!el)return;const [k,t]=netState();el.className="sync netb net-"+k;const s=el.querySelector("#syncT");if(s)s.textContent=t;}
 function offModal(){const on=navigator.onLine,q=OFF.q,mails=q.filter(x=>x.k==="mail"),ops=q.filter(x=>x.k!=="mail"),cs=Object.values(S.cands).filter(c=>c.id!=="exemple"),ph=cs.filter(c=>photoOf(c)).length;
   const lbl=o=>o.k==="mail"?`Mail à ${esc((o.args.to||[]).join(", "))} — ${esc(o.args.subject||"")}`:`${o.col==="candidats"?"Dossier "+esc(((S.cands[o.id]||{}).prenom||"")+" "+(((S.cands[o.id]||{}).nom||"").toUpperCase())):o.col==="demandes"?"Demande client":o.col==="sessions"?"Session / émargement":esc(o.col||o.path)}${o.m==="delete"?" (suppression)":""}`;
@@ -3085,7 +3092,7 @@ setInterval(()=>{try{if(["formateur","secretariat"].includes(S.role)&&!S.quiz&&!
 setTimeout(()=>{try{fetchServer()}catch(e){}},3500);
 /* Indicateur connexion : réseau + serveur DK/KODO */
 const _netState0=netState;
-netState=function(){const [k,t]=_netState0();if(k==="off")return [k,"Hors connexion"+(OFF.q.length?" · "+OFF.q.length+" en attente":"")];
+netState=function(){const [k,t]=_netState0();if(k==="off")return [k,OFF.q.length?OFF.q.length+" en attente d'envoi":"Les données restent sur cet appareil"];
   if(k==="sync"||k==="err")return [k,t];
   if(SRV.url&&SRV.ok===false)return ["err",(SRV.err&&SRV.err!=="serveur injoignable"?"En ligne · serveur : "+SRV.err:"En ligne · serveur injoignable")];
   if(SRV.url&&SRV.ok===true)return ["ok","En ligne · serveur connecté"];
