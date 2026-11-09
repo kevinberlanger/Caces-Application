@@ -1,0 +1,11 @@
+name = "caces-dk"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://kevinberlanger.github.io"
+
+# Remplacer l'id par celui donné par : npx wrangler kv namespace create FICHES
+[[kv_namespaces]]
+binding = "FICHES"
+id = "REMPLACER_PAR_ID_KV"
